@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Eviction in Vancouver</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+    <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css"
+    rel="stylesheet"
+    />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Karla', sans-serif;
+        }
+
+        #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        }
+
+        h1 {
+        font-size: 20px;
+        line-height: 30px;
+        }
+
+        h2 {
+        font-size: 14px;
+        line-height: 20px;
+        margin-bottom: 10px;
+        }
+
+        a {
+        text-decoration: none;
+        color: #2dc4b2;
+        }
+
+        #console {
+        position: absolute;
+        width: 260px;
+        margin: 10px;
+        padding: 10px 20px;
+        background-color: white;
+        }
+        .session {
+        margin-bottom: 20px;
+        }
+
+        .row {
+        height: 12px;
+        width: 100%;
+        }
+
+        .colors {
+        background: linear-gradient(
+            to right,
+            #ffffff,
+            #cce5ff,
+            #99ccff,
+            #66b2ff,
+            #3385ff,
+            #0800ff
+        );
+        margin-bottom: 5px;
+        }
+
+        .label {
+        width: 15%;
+        display: inline-block;
+        text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div id="console">
+      <h1>Eviction Map</h1>
+      <p>
+        Data:
+        <a href="https://firstunited.ca/evictions-map/"> 
+            Eviction in Metro Vancouver</a>
+        in Vancouver, June 2022
+      </p>
+      <div class="session">
+        <h2>Eviction Numbers</h2>
+        <div class="row colors"></div>
+        <div class="row labels">
+          <div class="label">0</div>
+          <div class="label"></div>
+          <div class="label"></div>
+          <div class="label"></div>
+          <div class="label">19</div>
+        </div>
+      </div>
+      <div class="session">
+        <h2>Age</h2>
+        <div class="row" id="filters">
+          <input id="all" type="radio" name="toggle" value="all" checked="checked" />
+          <label for="all">All</label>
+          <input id="teenager" type="radio" name="toggle" value="teenager" />
+          <label for="teenager">Teenager</label>
+          <input id="adult" type="radio" name="toggle" value="adult" />
+          <label for="adult">Adult</label>
+          <input id="elderly" type="radio" name="toggle" value="elderly" />
+          <label for="elderly">Elderly</label>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZGFsbmltMTAwNC0iLCJhIjoiY202cmQ2cWlpMGhxbjJxcXpmODI4bXM1MiJ9.PaIhpxf3tDIm5wkmsTxuwA';
+
+        const map = new mapboxgl.Map({
+        container: 'map', // container element id
+        style: 'mapbox://styles/mapbox/light-v11',
+        center: [-123.1216, 49.276], // initial map center in [lon, lat]
+        zoom: 11
+        });
+
+        map.on('load', () => {
+    map.addSource('Eviction_numbers', {
+        type: 'geojson',
+        data: 'https://raw.githubusercontent.com/dalnimwang/WJY/main/Eviction_numbers.geojson' // ✅ 确保是正确的URL
+    });
+
+    map.addLayer({
+        id: 'Eviction_numbers',
+        type: 'fill',
+        source: 'Eviction_numbers', // ✅ 这里写 source 的 id
+        paint: {
+            'fill-color': [
+                'interpolate', ['linear'], ['get', 'eviction_numbers'],
+                0, '#ffffff',  // 白色（无数据）
+                2, '#cce5ff',  // 浅蓝色
+                5, '#99ccff',  // 更深的蓝色
+                10, '#66b2ff', // 深蓝
+                15, '#3385ff', // 更深的蓝
+                19, '#0066ff'  // 纯蓝
+            ],
+            'fill-opacity': 0.6
+        }
+    });
+});
+
+        map.on('load', () => {
+            let filterAge = ['!=',['string',['get','age']],'placeholder']
+
+            map.addLayer({
+            id: 'evictions bc',
+            type: 'circle',
+            source: {
+            type: 'geojson',
+            data: 'https://raw.githubusercontent.com/dalnimwang/WJY/refs/heads/main/evictions%20bc.json' // replace this with the url of your own geojson
+            },
+            paint: {
+            'circle-radius': 4,
+            'circle-color': '#FF5733',
+            'circle-opacity': 0.8
+            },
+            'filter': filterAge
+        });
+
+        document.getElementById('filters').addEventListener('change', (event) => {
+        const ageGroup = event.target.value;
+
+        if (ageGroup === 'all') {
+            filterAge = ['!=', ['string', ['get', 'age']], 'placeholder'];
+        } else if (ageGroup === 'teenager') {
+            filterAge = ['match', ['get', 'age'], ['10_15', '15_20'], true, false];
+        } else if (ageGroup === 'adult') {
+            filterAge = ['match', ['get', 'age'], ['20_25','25_30','30_35', '35_40','40_45','45_50','50_55','55_60','60_65'], true, false];
+        } else if (ageGroup === 'elderly') {
+            filterAge = ['match', ['get', 'age'], ['65_70','70_75','75_80','80_85','85_90'], true, false];
+        } else {
+            console.error('Unknown age group');
+        }
+
+        // 🗺️ 更新地图筛选条件
+        map.setFilter('evictions bc', filterAge);
+    });
+});
+       
+
+
+
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+    <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css"
+    rel="stylesheet"
+    />
+    <style>
+
+
+        #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+        }
+
+
+        .row {
+        height: 12px;
+        width: 100%;
+        }
+
+        .colors {
+        background: linear-gradient(
+            to right,
+            #ffffff,
+            #cce5ff,
+            #99ccff,
+            #66b2ff,
+            #3385ff,
+            #0800ff
+        );
+        margin-bottom: 5px;
+        }
+
+        .label {
+        width: 15%;
+        display: inline-block;
+        text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div id="console">
+      <h1>Eviction Map</h1>
+      <p>
+        Data:
+        <a href="https://firstunited.ca/evictions-map/"> 
+            Eviction in Metro Vancouver</a>
+        in Vancouver, June 2022
+      </p>
+      <div class="session">
+        <h2>Eviction Numbers</h2>
+        <div class="row colors"></div>
+        <div class="row labels">
+          <div class="label">0</div>
+          <div class="label"></div>
+          <div class="label"></div>
+          <div class="label"></div>
+          <div class="label">19</div>
+        </div>
+      </div>
+      <div class="session">
+        <h2>Age</h2>
+        <div class="row" id="filters">
+          <input id="all" type="radio" name="toggle" value="all" checked="checked" />
+          <label for="all">All</label>
+          <input id="teenager" type="radio" name="toggle" value="teenager" />
+          <label for="teenager">Teenager</label>
+          <input id="adult" type="radio" name="toggle" value="adult" />
+          <label for="adult">Adult</label>
+          <input id="elderly" type="radio" name="toggle" value="elderly" />
+          <label for="elderly">Elderly</label>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1IjoiZGFsbmltMTAwNC0iLCJhIjoiY202cmQ2cWlpMGhxbjJxcXpmODI4bXM1MiJ9.PaIhpxf3tDIm5wkmsTxuwA';
+
+        const map = new mapboxgl.Map({
+        container: 'map', // container element id
+        style: 'mapbox://styles/mapbox/light-v11',
+        center: [-123.1216, 49.276], // initial map center in [lon, lat]
+        zoom: 11
+        });
+
+        map.on('load', () => {
+    map.addLayer({
+        id: 'homeless-shelter-locations',
+        type: 'circle',
+        source: {
+            type: 'geojson',
+            data: 'https://raw.githubusercontent.com/dalnimwang/WJY/refs/heads/main/homeless-shelter-locations.geojson' // replace this with the url of your own geojson
+            },
+        paint: {
+            'circle-radius': 4,
+            'circle-color': '#0800ff',
+            'circle-opacity': 0.8
+        }
+    });
+    map.on('click', 'homeless-shelter-locations', (e) => {
+        const coordinates = e.features[0].geometry.coordinates.slice();
+        const facility = e.features[0].properties.facility;
+        const phone = e.features[0].properties.phone;
+
+        new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(`
+                <strong>Shelter Name:</strong> ${facility}<br>
+                <strong>Phone:</strong> ${phone}
+            `)
+            .addTo(map);
+    });
+
+    map.on('mouseenter', 'homeless-shelter-locations', () => {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+
+    map.on('mouseleave', 'homeless-shelter-locations', () => {
+        map.getCanvas().style.cursor = '';
+    });
+});
+
+
+    </script>
+</body>
+
+</html>
